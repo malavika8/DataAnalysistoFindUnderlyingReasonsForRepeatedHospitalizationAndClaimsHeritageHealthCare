@@ -1,0 +1,122 @@
+---
+title: "Project1Bana780"
+author: "Malavika_Ravindra"
+date: "01/02/2020"
+output: html_document
+---
+
+```{r message=FALSE, warning=FALSE,include=TRUE}
+library(tidyverse)
+claims <- read.csv('Claims.csv')
+
+clean.1.tv <- claims %>% filter(Year=="Y1")
+
+hospital.y2 <- read.csv('DaysInHospital_Y2.csv')
+hospital.y3 <- read.csv('DaysInHospital_Y3.csv')
+
+clean.2.tv <- claims %>% filter(Year=="Y2") %>% filter(MemberID %in% hospital.y2$MemberID)
+clean.3.tv <- claims %>% filter(Year=="Y3") %>% filter(MemberID %in% hospital.y3$MemberID)
+
+
+
+
+mdata <- read_csv("Members.csv")
+Yr123 <- rbind(clean.1.tv,clean.2.tv,clean.3.tv)
+Yr123withMembersInfo <- merge(Yr123,mdata,by="MemberID")
+
+
+#merge the yearly claims with daysinhospital
+y2join <- merge(clean.2.tv,hospital.y2,by="MemberID")
+y3join <- merge(clean.3.tv,hospital.y3,by="MemberID")
+
+Yr2ndYr3DaysInHosp <- rbind(y2join,y3join)
+Yr2ndYr3withMembersInfo <- merge(Yr2ndYr3DaysInHosp,mdata,by="MemberID")
+
+
+```
+
+#2.	Identify some key pairs of variables and explore the relationships between them (ideally visually).
+```{r  message=FALSE, warning=FALSE, include=TRUE}
+# Speciality wise days in Hospital
+ggplot(data = y2ndy3cleanNA) + geom_bar(mapping = aes(x = DaysInHospital),fill="red") + facet_wrap(~ Specialty, nrow = 4)
+
+Yr123withMembersInfo <- Yr123withMembersInfo %>% drop_na(Sex)
+
+#Frequency DistributionGenderWiseYear2nd3PayDelay
+ggplot(data = Yr123withMembersInfo) + geom_bar(mapping = aes(x = PayDelay),fill="red") + facet_grid(Year~ Sex)
+
+#Frequency Distributio YearndCharlsonIndex PayDelay
+ggplot(data = Yr123withMembersInfo) + geom_bar(mapping = aes(x = PayDelay),fill="green") + ylim(c(0,3000)) + facet_grid(Year~ CharlsonIndex)
+
+# GenderCharlsonIndexPayDelay
+ggplot(data = y2ndy3cleanNA) + geom_bar(mapping = aes(x = DaysInHospital),fill="blueviolet") + facet_grid(CharlsonIndex~ Sex)
+
+ggplot(data = y2ndy3cleanNA) + geom_bar(mapping = aes(x = DaysInHospital),fill="blueviolet") + facet_grid(CharlsonIndex~ Sex)
+```
+
+#4 How might these analyses inform a more substantial analysis
+```{r  message=FALSE, warning=FALSE, include=TRUE}
+
+PrimaryCoGroupTrauma <- Yr2ndYr3DaysInHosp[((Yr2ndYr3DaysInHosp$PrimaryConditionGroup=="TRAUMA") & (Yr2ndYr3DaysInHosp$ProcedureGroup=="SMS")),]
+summary(PrimaryCoGroupTrauma$PlaceSvc)
+
+levels(PrimaryCoGroupTrauma$PlaceSvc)[levels(PrimaryCoGroupTrauma$PlaceSvc)==""] <- NA_character_
+levels(PrimaryCoGroupTrauma$Specialty)[levels(PrimaryCoGroupTrauma$Specialty)==""] <- NA_character_
+
+PCGMembersTrauma <- merge(PrimaryCoGroupTrauma,mdata,by="MemberID")
+
+ggplot(data = PrimaryCoGroupTrauma) + geom_bar(mapping = aes(x = DaysInHospital),fill="brown") + facet_grid(Specialty~ PlaceSvc)
+
+```
+
+
+
+
+#1.	Identify the most important variables, and create graphics to explore the frequencies of their different values.
+```{r  message=FALSE, warning=FALSE, include=TRUE}
+library(dplyr)
+
+summary(y2ndy3cleanNA$Specialty)
+levels(y2ndy3cleanNA$Specialty)
+levels(y2ndy3cleanNA$Specialty)[levels(y2ndy3cleanNA$Specialty)==""] <- NA_character_
+
+y2ndy3cleanNA <- y2ndy3cleanNA %>% drop_na(Specialty)
+
+#plot daysinhospital by specialty %>% filter(DaysInHospital>0) %>% ggplot....can be added
+y2ndy3cleanNA %>% ggplot() + geom_bar(mapping=aes(x=Specialty,y=DaysInHospital,fill=Specialty),stat = "summary", fun.y = "mean") + coord_flip()
+
+y2ndy3cleanNA %>% ggplot() + geom_bar(mapping=aes(x=PrimaryConditionGroup,y=DaysInHospital,fill=Specialty),stat = "summary", fun.y = "mean") + coord_flip()
+
+  
+
+#CharlsonIndexwiseDaysInHosp Average
+y2ndy3cleanNA %>% ggplot() + geom_bar(mapping=aes(x=CharlsonIndex,y=DaysInHospital,fill=CharlsonIndex),stat = "summary", fun.y = "mean")
+
+CharlsonIndexwiseDaysInHosp <- y2ndy3cleanNA %>% group_by(CharlsonIndex) %>% summarise(TotalDaysInHospital=sum(DaysInHospital))
+
+CharlsonIndexwiseDaysInHosp %>% ggplot() + geom_bar(mapping=aes(x=CharlsonIndex,y=TotalDaysInHospital,fill=CharlsonIndex),stat = "summary", fun.y = "sum")
+
+specialty.y23 <- y2ndy3cleanNA  %>% count(MemberID, Specialty, name="specialn")  %>%
+  pivot_wider(names_from = Specialty, values_from = specialn, values_fill = list(n = 0)) 
+
+ggplot(data=specialty.y23) +
+  geom_histogram(mapping=aes(x=Laboratory),fill="brown")
+
+
+ggplot(data=specialty.y23) +
+  geom_histogram(mapping=aes(x=Emergency),fill="cadetblue")
+
+ggplot(data=specialty.y23) +
+  geom_histogram(mapping=aes(x=Surgery),fill="green")
+
+ggplot(data=specialty.y23) +
+  geom_histogram(mapping=aes(x=Rehabilitation),fill="chocolate4")
+
+ggplot(data=specialty.y23) +
+  geom_histogram(mapping=aes(x=Pediatrics),fill="blue")
+
+ggplot(data=specialty.y23) +
+  geom_histogram(mapping=aes(x=Pediatrics),fill="yellow")
+
+```
+
